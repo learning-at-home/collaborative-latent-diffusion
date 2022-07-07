@@ -24,13 +24,18 @@ python -m run_server --custom_module_path ./your_code_here.py --expert_cls Examp
 import torch
 import hivemind
 from client import BalancedRemoteExpert
+
+
 dht = hivemind.DHT(
-    initial_peers=['TODO_COPY_ADDRESS_FROM_ONE_OR_MODE_SERVERS'], start=True, client_mode=True
+    initial_peers=['/ip4/127.0.0.1/tcp/31337/p2p/QmT6wLQf84oFktJJNxZKfVLNkvenamKFPGU5SQRWNTfJTD'],
+    # ^-- REPLACE THIS WITH THE ADDRESS PRINTED BY ONE OF YOUR SERVERS
+    start=True, client_mode=True
 )
 
-self = BalancedRemoteExpert(dht=dht, uid_prefix="enter_name_here.")
+client = BalancedRemoteExpert(dht=dht, uid_prefix="enter_name_here.") # "." is important :)
 
-self(torch.randn(1, 512))
+for i in range(10):
+    outputs = client(torch.randn(1, 512))
 ```
 
 

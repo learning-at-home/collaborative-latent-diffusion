@@ -121,6 +121,7 @@ class _BalancedRemoteModuleCall(torch.autograd.Function):
         while True:
             try:
                 with expert_balancer.use_another_expert(forward_task_size) as chosen_expert:
+                    print(f"[DEBUGPRINT] You are being served by: {chosen_expert}")
                     deserialized_outputs = RemoteExpertWorker.run_coroutine(expert_forward(
                         chosen_expert.uid, inputs, serialized_tensors, chosen_expert.stub))
                 break

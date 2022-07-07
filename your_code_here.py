@@ -7,11 +7,13 @@ from hivemind.moe.server.layers.custom_experts import register_expert_class
 class ExampleModule(nn.Module):
     def __init__(self, hid_dim):
         super().__init__()
+        print("[DEBUGPRINT] INIT MY MODULE!!")
         self.ffn = nn.Linear(hid_dim, 4 * hid_dim)
         self.ffn_output = nn.Linear(4 * hid_dim, hid_dim)
         self.layer_norm = nn.LayerNorm(hid_dim, eps=1e-12)
 
     def forward(self, x):
+        print(f"[DEBUGPRINT] RAN FORWARD PASS, {x.shape}!!")
         ffn_output = self.ffn(x)
         ffn_output = torch.nn.functional.gelu(ffn_output)
         ffn_output = self.ffn_output(ffn_output)
