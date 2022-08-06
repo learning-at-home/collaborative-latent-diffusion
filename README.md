@@ -28,7 +28,7 @@ pip install matplotlib
 Call the remote inference:
 
 ```python
-from client import DiffusionClient
+from diffusion_client import DiffusionClient
 
 # Here, you can specify one or more addresses of any servers
 # connected to the swarm (no need to list all of them)
