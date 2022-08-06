@@ -26,6 +26,8 @@ Call the remote inference:
 ```python
 from client import DiffusionClient
 
+# Here, you can specify one or more addresses of any servers
+# connected to the swarm (no need to list all of them)
 client = DiffusionClient(
     initial_peers=['/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86'],
 )
@@ -62,6 +64,8 @@ python -m run_server --identity server1.id --host_maddrs "/ip4/0.0.0.0/tcp/31234
     --initial_peers "/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86"
 # Skip --initial_peers if you'd like to start a new swarm
 ```
+
+Client queries are evenly distributed among all servers connected to the swarm.
 
 Ensure that `--max-batch-size` is small enough for your GPU to do inference without running out of memory. The default value is 16.
 
