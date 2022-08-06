@@ -1,20 +1,47 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
 from torch.autograd.function import once_differentiable
 
 import hivemind
 from load_balancer import LoadBalancer, NoModulesFound
 from hivemind.moe.client.expert import DUMMY, expert_forward
-from hivemind.proto import runtime_pb2
-from hivemind.compression import serialize_torch_tensor, deserialize_torch_tensor
-from hivemind.utils import get_logger, nested_compare, nested_flatten, nested_pack
+from hivemind.compression import serialize_torch_tensor
+from hivemind.utils import get_logger, nested_compare, nested_flatten, nested_pack, use_hivemind_log_handler
+
 
 logger = get_logger(__name__)
 
+
+MAX_PROMPT_LENGTH = 512
 MAX_NODES = 99999
+
+
+class DiffusionClient:
+    def __init__(
+        self,
+        *,
+        initial_peers: List[str],
+        dht_prefix: str = "diffusion",
+        **kwargs
+    ):
+        dht = hivemind.DHT(initial_peers, client_mode=True, start=True, **kwargs)
+        self.expert = BalancedRemoteExpert(dht=dht, uid_prefix=dht_prefix + ".")
+
+    def draw(self, prompts: List[str]) -> np.ndarray:
+        encoded_prompts = []
+        for prompt in prompts:
+            tensor = torch.tensor(list(prompt.encode()), dtype=torch.int64)
+            tensor = F.pad(tensor, (0, MAX_PROMPT_LENGTH - len(tensor)))
+            encoded_prompts.append(tensor)
+        encoded_prompts = torch.stack(encoded_prompts)
+
+        output_images, = self.expert(encoded_prompts)
+        return output_images.numpy()
 
 
 class BalancedRemoteExpert(nn.Module):
@@ -123,7 +150,7 @@ class _BalancedRemoteModuleCall(torch.autograd.Function):
         while True:
             try:
                 with expert_balancer.use_another_expert(forward_task_size) as chosen_expert:
-                    print(f"[DEBUGPRINT] You are being served by: {chosen_expert}")
+                    logger.info(f"Query served by: {chosen_expert}")
                     deserialized_outputs = RemoteExpertWorker.run_coroutine(expert_forward(
                         chosen_expert.uid, inputs, serialized_tensors, chosen_expert.stub))
                 break

@@ -89,9 +89,17 @@ class LoadBalancer:
             logger.debug(f"Banned expert {uid} with expiration time = {expiration_time:.2f}.")
 
     @contextmanager
-    def use_another_expert(self, task_size: float) -> RemoteExpert:
+    def use_another_expert(self, task_size: float, max_tries: int = 3) -> RemoteExpert:
+        n_tries = 0
         while True:
             if len(self.queue) == 0:
+                self.update_finished.clear()
+                self.update_trigger.set()
+                self.update_finished.wait()
+
+                n_tries += 1
+                if n_tries <= max_tries:
+                    continue
                 raise NoModulesFound('No modules found in the network')
 
             with self.lock:

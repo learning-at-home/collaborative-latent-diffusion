@@ -6,6 +6,7 @@ Built using the code from Google Colab [1] assembled by @multimodalart [2].
 """
 
 import argparse
+import gc
 import os
 import sys
 import zipfile
@@ -16,28 +17,21 @@ sys.path.append('../taming-transformers')
 
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
+import autokeras as ak
+import open_clip
+import numpy as np
 import torch
 import torch.nn as nn
+from einops import rearrange
+from ldm.models.diffusion.ddim import DDIMSampler
+from ldm.models.diffusion.plms import PLMSSampler
+from ldm.util import instantiate_from_config
 from hivemind.moe.server.layers.custom_experts import register_expert_class
 from hivemind.utils.logging import get_logger
 from ldm.util import instantiate_from_config
 from omegaconf import OmegaConf
 from taming.models import vqgan
-
-import autokeras as ak
 from tensorflow.keras.models import load_model
-import numpy as np
-from omegaconf import OmegaConf
-from tqdm.auto import trange
-tqdm_auto_model = __import__("tqdm.auto", fromlist=[None])
-sys.modules['tqdm'] = tqdm_auto_model
-from einops import rearrange
-from torchvision.utils import make_grid
-import gc
-from ldm.util import instantiate_from_config
-from ldm.models.diffusion.ddim import DDIMSampler
-from ldm.models.diffusion.plms import PLMSSampler
-import open_clip
 
 
 logger = get_logger(__name__)
@@ -45,7 +39,7 @@ logger = get_logger(__name__)
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), '../model')
 
-COND_NUM_TOKENS = 128
+MAX_PROMPT_LENGTH = 512
 CHANNELS = 3
 HEIGHT = WIDTH = 256
 
@@ -118,7 +112,7 @@ def run(model, clip_model, preprocess, safety_model, opt):
     else:
         sampler = DDIMSampler(model)
 
-    prompt = opt.prompt
+    decoded_prompts = [bytes(tensor).rstrip(b'0').decode(errors='ignore') for tensor in opt.prompts]
 
     all_samples=list()
     with torch.no_grad():
@@ -127,8 +121,8 @@ def run(model, clip_model, preprocess, safety_model, opt):
                 uc = None
                 if opt.scale > 0:
                     uc = model.get_learned_conditioning(opt.n_samples * [""])
-                for n in trange(opt.n_iter, desc="Sampling"):
-                    c = model.get_learned_conditioning(opt.n_samples * [prompt])
+                for n in range(opt.n_iter):
+                    c = model.get_learned_conditioning(decoded_prompts)
                     shape = [4, opt.H//8, opt.W//8]
                     samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
                                                     conditioning=c,
@@ -161,9 +155,8 @@ def run(model, clip_model, preprocess, safety_model, opt):
 
 
 def get_input_example(batch_size: int, *_unused):
-    cond_tokens = torch.empty((batch_size, COND_NUM_TOKENS), dtype=torch.int64)
-    initial_images = torch.empty((batch_size, CHANNELS, HEIGHT, WIDTH), dtype=torch.uint8)
-    return (cond_tokens, initial_images)
+    prompts = torch.empty((batch_size, MAX_PROMPT_LENGTH), dtype=torch.int64)
+    return (prompts,)
 
 
 @register_expert_class("DiffusionModule", get_input_example)
@@ -171,29 +164,27 @@ class DiffusionModule(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self._safety_model = load_safety_model("ViT-B/32")
-        self._clip_model, _, self._clip_preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='openai')
-        logger.info('Loaded safety model and CLIP')
+        # self._safety_model = load_safety_model("ViT-B/32")
+        # self._clip_model, _, self._clip_preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='openai')
+        # logger.info('Loaded safety model and CLIP')
+        self._safety_model = self._clip_model = self._clip_preprocess = None
 
         config = OmegaConf.load("../latent-diffusion/configs/latent-diffusion/txt2img-1p4B-eval.yaml")
         self._model = load_model_from_config(config, f"{MODEL_PATH}/latent_diffusion_txt2img_f8_large.ckpt")
         self._model = self._model.cuda()
         logger.info('Loaded diffusion model')
 
-    def forward(self, cond_tokens: torch.LongTensor, initial_images: torch.ByteTensor):
-        logger.info(f"Running forward pass, "
-                    f"cond_tokens.shape={cond_tokens.shape}, initial_images.shape={initial_images.shape}")
-
-        Prompt = "A mecha robot holding a sign that reads: 'Is AI art, art?" #@param{type:"string"}
+    def forward(self, prompts: torch.LongTensor):
+        logger.info(f"Running forward pass, prompts.shape={prompts.shape}")
 
         args = argparse.Namespace(
-            prompt = Prompt,
+            prompts=prompts,
             ddim_steps=50,
             ddim_eta=0.0,
             n_iter=1,
             W=WIDTH,
             H=HEIGHT,
-            n_samples=cond_tokens.shape[0],
+            n_samples=prompts.shape[0],
             scale=5.0,
             plms=True,
             nsfw_threshold=0.5
