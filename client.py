@@ -6,7 +6,7 @@ from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
 from torch.autograd.function import once_differentiable
 
 import hivemind
-from load_balancer import LoadBalancer
+from load_balancer import LoadBalancer, NoModulesFound
 from hivemind.moe.client.expert import DUMMY, expert_forward
 from hivemind.proto import runtime_pb2
 from hivemind.compression import serialize_torch_tensor, deserialize_torch_tensor
@@ -86,8 +86,10 @@ class BalancedRemoteExpert(nn.Module):
             try:
                 with self.expert_balancer.use_another_expert(1) as chosen_expert:
                     self._expert_info = chosen_expert.info
-            except BaseException as e:
-                logger.error(f"Tried to get expert info from {chosen_expert} but caught {repr(e)}")
+            except NoModulesFound:
+                raise
+            except Exception:
+                logger.exception(f"Tried to get expert info from {chosen_expert} but caught:")
         return self._expert_info
 
 
@@ -125,8 +127,10 @@ class _BalancedRemoteModuleCall(torch.autograd.Function):
                     deserialized_outputs = RemoteExpertWorker.run_coroutine(expert_forward(
                         chosen_expert.uid, inputs, serialized_tensors, chosen_expert.stub))
                 break
-            except BaseException as e:
-                logger.error(f"Tried to call forward for expert {chosen_expert} but caught {repr(e)}")
+            except NoModulesFound:
+                raise
+            except Exception:
+                logger.exception(f"Tried to call forward for expert {chosen_expert} but caught:")
 
         return tuple(deserialized_outputs)
 
@@ -147,7 +151,9 @@ class _BalancedRemoteModuleCall(torch.autograd.Function):
         #             backward_request = runtime_pb2.ExpertRequest(uid=chosen_expert.uid, tensors=serialized_tensors)
         #             grad_inputs = chosen_expert.stub.forward(backward_request, timeout=ctx.backward_timeout)
         #         break
-        #     except BaseException as e:
-        #         logger.error(f"Tried to call backward for expert {chosen_expert} but caught {repr(e)}")
+        #     except NoModulesFound:
+        #         raise
+        #     except Exception:
+        #         logger.exception(f"Tried to call backward for expert {chosen_expert} but caught:")
         # deserialized_grad_inputs = [deserialize_torch_tensor(tensor) for tensor in grad_inputs.tensors]
         # return (DUMMY, None, None, None, None, None, None, *deserialized_grad_inputs)

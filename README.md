@@ -13,9 +13,8 @@ pip install https://github.com/learning-at-home/hivemind/archive/61e5e8c1f33dd23
 
 ### Run server
 ```python
-python -m run_server --custom_module_path ./your_code_here.py --module_cls ExampleModule \
-   --dht_prefix "enter_name_here" --identity server1.id  --host_maddrs "/ip4/0.0.0.0/tcp/31337"
-# connect extra servers via --initial_peers ADDRESS_PRINTED_BY_ONE_OR_MORE_EXISTNG_PEERS # e.g. /ip4/123.123.123.123/rcp/31337
+python -m run_server --identity server1.id --host_maddrs "/ip4/0.0.0.0/tcp/31337"
+# if there are existing servers, add --initial_peers ADDRESS_PRINTED_BY_ONE_OR_MORE_EXISTNG_PEERS # e.g. /ip4/123.123.123.123/tcp/31337
 ```
 
 ### Call remote inference

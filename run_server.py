@@ -25,9 +25,9 @@ def main():
     parser = configargparse.ArgParser(default_config_files=["config.yml"])
     parser.add('-c', '--config', required=False, is_config_file=True, help='config file path')
 
-    parser.add_argument('--dht_prefix', type=str, required=True)
-    parser.add_argument('--module_cls', type=str, default='ffn', required=False,
-                        help="name of a pytorch module that is being served, see your_code_here.py")
+    parser.add_argument('--dht_prefix', type=str, default='diffusion')
+    parser.add_argument('--module_cls', type=str, default='DiffusionModule',
+                        help="name of a pytorch module that is being served")
     parser.add_argument('--host_maddrs', type=str, nargs='+', default=['/ip4/0.0.0.0/tcp/0'], required=False,
                         help='Multiaddrs to listen for external connections from other p2p instances; default: all IPv4 and TCP: /ip4/0.0.0.0/tcp/0')
     parser.add_argument('--announce_maddrs', type=str, nargs='+', default=None, required=False,
@@ -56,7 +56,7 @@ def main():
     parser.add_argument('--stats_report_interval', type=int, required=False,
                         help='Interval between two reports of batch processing performance statistics')
 
-    parser.add_argument('--custom_module_path', type=str, required=False,
+    parser.add_argument('--custom_module_path', type=str, default='model.py',
                         help='Path of a file with custom nn.modules, wrapped into special decorator')
     parser.add_argument('--identity_path', type=str, required=False, help='Path to identity file to be used in P2P')
 
@@ -75,6 +75,7 @@ def main():
     dht = hivemind.DHT(initial_peers=args.initial_peers,
                        host_maddrs=args.host_maddrs,
                        announce_maddrs=args.announce_maddrs,
+                       identity_path=args.identity_path,
                        start=True)
     visible_maddrs_str = [str(a) for a in dht.get_visible_maddrs()]
     logger.info(f"Running DHT node on {visible_maddrs_str}, initial peers = {args.initial_peers}")

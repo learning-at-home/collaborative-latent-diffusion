@@ -92,10 +92,7 @@ class LoadBalancer:
     def use_another_expert(self, task_size: float) -> RemoteExpert:
         while True:
             if len(self.queue) == 0:
-                self.update_finished.clear()
-                self.update_trigger.set()
-                self.update_finished.wait()
-                continue
+                raise NoModulesFound('No modules found in the network')
 
             with self.lock:
                 current_runtime, _, uid = heap_entry = heapq.heappop(self.queue)
@@ -128,3 +125,7 @@ class LoadBalancer:
         self.update_finished.clear()
         self.update_trigger.set()
         self.update_finished.wait()
+
+
+class NoModulesFound(RuntimeError):
+    pass
