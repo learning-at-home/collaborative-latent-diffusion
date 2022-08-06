@@ -2,13 +2,17 @@ from functools import partial
 from pathlib import Path
 
 import configargparse
+import hivemind
 import torch
+from hivemind import ModuleBackend
 
 from hivemind.moe import Server
-from hivemind.moe.server.layers import schedule_name_to_scheduler
+from hivemind.moe.server.layers import add_custom_models_from_file, name_to_block, name_to_input
+from hivemind.moe.server.server import _generate_uids
 from hivemind.proto.runtime_pb2 import CompressionType
 from hivemind.utils.limits import increase_file_limit
 from hivemind.utils.logging import get_logger, use_hivemind_log_handler
+from hivemind.utils.tensor_descr import DUMMY_BATCH_SIZE, BatchTensorDescriptor
 
 from client import MAX_NODES
 
@@ -22,37 +26,26 @@ def main():
     parser.add('-c', '--config', required=False, is_config_file=True, help='config file path')
 
     parser.add_argument('--dht_prefix', type=str, required=True)
-    parser.add_argument('--expert_cls', type=str, default='ffn', required=False,
-                        help="expert type from test_utils.layers, e.g. 'ffn', 'transformer', 'det_dropout' or 'nop'")
-    parser.add_argument('--hidden_dim', type=int, default=1024, required=False, help='main dimension for expert_cls')
-
+    parser.add_argument('--module_cls', type=str, default='ffn', required=False,
+                        help="name of a pytorch module that is being served, see your_code_here.py")
     parser.add_argument('--host_maddrs', type=str, nargs='+', default=['/ip4/0.0.0.0/tcp/0'], required=False,
                         help='Multiaddrs to listen for external connections from other p2p instances; default: all IPv4 and TCP: /ip4/0.0.0.0/tcp/0')
-    parser.add_argument('--announce_maddrs', type=list, nargs='+', default=None, required=False,
+    parser.add_argument('--announce_maddrs', type=str, nargs='+', default=None, required=False,
                         help='Visible multiaddrs the host announces for external connections from other p2p instances')
 
-    parser.add_argument('--num_handlers', type=int, default=None, required=False,
+    parser.add_argument('--num_handlers', type=int, default=8, required=False,
                         help='server will use this many processes to handle incoming requests')
     parser.add_argument('--min_batch_size', type=int, default=1,
                         help='Minimum required batch size for all expert operations')
-    parser.add_argument('--max_batch_size', type=int, default=16384,
+    parser.add_argument('--max_batch_size', type=int, default=16,
                         help='The total number of examples in the same batch will not exceed this value')
     parser.add_argument('--device', type=str, default=None, required=False,
                         help='all experts will use this device in torch notation; default: cuda if available else cpu')
 
-    parser.add_argument('--optimizer', type=str, default='adam', required=False, help='adam, sgd or none')
-    parser.add_argument('--scheduler', type=str, choices=schedule_name_to_scheduler.keys(), default='none',
-                        help='LR scheduler type to use')
-    parser.add_argument('--num_warmup_steps', type=int, required=False,
-                        help='The number of warmup steps for LR schedule')
     parser.add_argument('--update_period', type=float, required=False, default=30,
                         help='Server will report experts to DHT once in this many seconds')
     parser.add_argument('--expiration', type=float, required=False, default=None,
                         help='DHT entries will expire after this many seconds')
-    parser.add_argument('--num_training_steps', type=int, required=False, help='The total number of steps for LR schedule')
-
-    parser.add_argument('--clip_grad_norm', type=float, required=False, help='Maximum gradient norm used for clipping')
-
     parser.add_argument('--initial_peers', type=str, nargs='*', required=False, default=[],
                         help='multiaddrs of one or more active DHT peers (if you want to join an existing DHT)')
     parser.add_argument('--increase_file_limit', action='store_true',
@@ -68,29 +61,63 @@ def main():
     parser.add_argument('--identity_path', type=str, required=False, help='Path to identity file to be used in P2P')
 
     # fmt:on
-    args = vars(parser.parse_args())
-    args.pop("config", None)
-    optimizer = args.pop("optimizer")
-    if optimizer == "adam":
-        optim_cls = torch.optim.Adam
-    elif optimizer == "sgd":
-        optim_cls = partial(torch.optim.SGD, lr=0.01)
-    elif optimizer == "none":
-        optim_cls = None
-    else:
-        raise ValueError("optim_cls must be adam, sgd or none")
+    args = parser.parse_args()
+    expert_pattern = f"{args.dht_prefix}.0.[0:{MAX_NODES}]"
 
-    args['num_experts'] = 1
-    dht_prefix = args.pop("dht_prefix", None)
-    args['expert_pattern'] = f"{dht_prefix}.0.[0:{MAX_NODES}]"
-
-    if args.pop("increase_file_limit"):
+    if args.increase_file_limit:
         increase_file_limit()
 
-    compression_type = args.pop("compression")
-    compression = getattr(CompressionType, compression_type)
+    compression = getattr(CompressionType, args.compression)
+    if args.custom_module_path is not None:
+        add_custom_models_from_file(args.custom_module_path)
+    assert args.module_cls in name_to_block, f"module {args.module_cls} not found"
 
-    server = Server.create(**args, optim_cls=optim_cls, start=True, compression=compression)
+    dht = hivemind.DHT(initial_peers=args.initial_peers,
+                       host_maddrs=args.host_maddrs,
+                       announce_maddrs=args.announce_maddrs,
+                       start=True)
+    visible_maddrs_str = [str(a) for a in dht.get_visible_maddrs()]
+    logger.info(f"Running DHT node on {visible_maddrs_str}, initial peers = {args.initial_peers}")
+
+    num_modules = 1
+    reserved_uids = []
+
+    uids_to_generate = num_modules - len(reserved_uids)
+    if uids_to_generate > 0:
+        logger.info(f"Generating {uids_to_generate} expert uids from pattern {expert_pattern}")
+        reserved_uids.extend(_generate_uids(uids_to_generate, expert_pattern, dht))
+
+    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+    sample_input = name_to_input[args.module_cls](DUMMY_BATCH_SIZE)
+    if isinstance(sample_input, tuple):
+        args_schema = tuple(BatchTensorDescriptor.from_tensor(arg, compression) for arg in sample_input)
+    else:
+        args_schema = (BatchTensorDescriptor.from_tensor(sample_input, compression),)
+
+    # initialize pytorch module
+    backends = {}
+    for uid in reserved_uids:
+        backends[uid] = ModuleBackend(
+            name=uid,
+            module=name_to_block[args.module_cls](),
+            args_schema=args_schema,
+            optimizer=None,
+            scheduler=None,
+            min_batch_size=args.min_batch_size,
+            max_batch_size=args.max_batch_size,
+        )
+
+    server = Server(
+        dht,
+        backends,
+        num_connection_handlers=args.num_handlers,
+        device=device,
+        checkpoint_dir=args.checkpoint_dir,
+        stats_report_interval=args.stats_report_interval,
+        update_period=args.update_period,
+        expiration=args.expiration,
+        start=True,
+    )
 
     try:
         server.join()
@@ -98,7 +125,6 @@ def main():
         logger.info("Caught KeyboardInterrupt, shutting down")
     finally:
         server.shutdown()
-
 
 if __name__ == "__main__":
     main()

@@ -13,7 +13,7 @@ pip install https://github.com/learning-at-home/hivemind/archive/61e5e8c1f33dd23
 
 ### Run server
 ```python
-python -m run_server --custom_module_path ./your_code_here.py --expert_cls ExampleModule --hidden_dim 512 \
+python -m run_server --custom_module_path ./your_code_here.py --module_cls ExampleModule \
    --dht_prefix "enter_name_here" --identity server1.id  --host_maddrs "/ip4/0.0.0.0/tcp/31337"
 # connect extra servers via --initial_peers ADDRESS_PRINTED_BY_ONE_OR_MORE_EXISTNG_PEERS # e.g. /ip4/123.123.123.123/rcp/31337
 ```
@@ -35,7 +35,8 @@ dht = hivemind.DHT(
 client = BalancedRemoteExpert(dht=dht, uid_prefix="enter_name_here.") # "." is important :)
 
 for i in range(10):
-    outputs = client(torch.randn(1, 512))
+    client(torch.randint(0, 10_000, (1, 128), dtype=torch.int64),
+           torch.randint(0, 100, (1, 3, 256, 256), dtype=torch.uint8))
 ```
 
 

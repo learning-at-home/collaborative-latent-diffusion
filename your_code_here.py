@@ -2,19 +2,25 @@ import torch
 import torch.nn as nn
 from hivemind.moe.server.layers.custom_experts import register_expert_class
 
+COND_NUM_TOKENS = 128
+CHANNELS = 3
+HEIGHT = WIDTH = 256
 
-@register_expert_class("ExampleModule", lambda batch_size, hid_dim: torch.empty((batch_size, hid_dim)))
+STEPS = 50
+
+def get_input_example(batch_size: int, *_unused):
+    cond_tokens = torch.empty((batch_size, COND_NUM_TOKENS), dtype=torch.int64)
+    initial_images = torch.empty((batch_size, 3, HEIGHT, WIDTH), dtype=torch.uint8)
+    return (cond_tokens, initial_images)
+
+
+@register_expert_class("ExampleModule", get_input_example)
 class ExampleModule(nn.Module):
-    def __init__(self, hid_dim):
+    def __init__(self):
         super().__init__()
         print("[DEBUGPRINT] INIT MY MODULE!!")
-        self.ffn = nn.Linear(hid_dim, 4 * hid_dim)
-        self.ffn_output = nn.Linear(4 * hid_dim, hid_dim)
-        self.layer_norm = nn.LayerNorm(hid_dim, eps=1e-12)
 
-    def forward(self, x):
-        print(f"[DEBUGPRINT] RAN FORWARD PASS, {x.shape}!!")
-        ffn_output = self.ffn(x)
-        ffn_output = torch.nn.functional.gelu(ffn_output)
-        ffn_output = self.ffn_output(ffn_output)
-        return self.layer_norm(x + ffn_output)
+    def forward(self, cond_tokens: torch.LongTensor, initial_images: torch.ByteTensor):
+        print(f"[DEBUGPRINT] RAN FORWARD PASS, {cond_tokens.shape}, {initial_images.shape}!!")
+        output_images = initial_images * 10
+        return (output_images.to(torch.uint8),) # note: output dtype is important since it affects bandwidth usage!
