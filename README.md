@@ -36,6 +36,7 @@ client = DiffusionClient(initial_peers=[
     '/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86',
     '/ip4/193.106.95.184/tcp/31235/p2p/QmYN4gEa3uGVcxqjMznr5vEG7DUBGUWZgT98Rnrs6GU4Hn',
 ])
+print(f'Found {client.n_active_servers} active servers')
 
 images = client.draw(2 * ['a photo of the san francisco golden gate bridge',
                           'graphite sketch of a gothic cathedral',

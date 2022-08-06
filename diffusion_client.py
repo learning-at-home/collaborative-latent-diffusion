@@ -43,6 +43,10 @@ class DiffusionClient:
         output_images, = self.expert(encoded_prompts)
         return output_images.numpy()
 
+    @property
+    def n_active_servers(self) -> int:
+        return self.expert.expert_balancer.n_active_experts
+
 
 class BalancedRemoteExpert(nn.Module):
     """

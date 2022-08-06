@@ -65,6 +65,19 @@ class LoadBalancer:
             self.last_update = get_dht_time()
             self.update_finished.set()
 
+    def _trigger_updating_experts(self):
+        self.update_finished.clear()
+        self.update_trigger.set()
+        self.update_finished.wait()
+
+    @property
+    def n_active_experts(self) -> int:
+        if len(self.uid_to_queue) == 0:
+            # Maybe it did not do the first update yet
+            self._trigger_updating_experts()
+
+        return len(self.uid_to_queue)
+
     def _add_expert(self, uid: ExpertUID, peer_id: PeerID, expiration_time: DHTExpiration):
         with self.lock:
             self.experts.store(uid, peer_id, expiration_time)
@@ -93,14 +106,12 @@ class LoadBalancer:
         n_tries = 0
         while True:
             if len(self.queue) == 0:
-                self.update_finished.clear()
-                self.update_trigger.set()
-                self.update_finished.wait()
+                if n_tries == max_tries:
+                    raise NoModulesFound('No modules found in the network')
 
                 n_tries += 1
-                if n_tries <= max_tries:
-                    continue
-                raise NoModulesFound('No modules found in the network')
+                self._trigger_updating_experts()
+                continue
 
             with self.lock:
                 current_runtime, _, uid = heap_entry = heapq.heappop(self.queue)
@@ -130,9 +141,7 @@ class LoadBalancer:
 
     def shutdown(self):
         self.is_alive.clear()
-        self.update_finished.clear()
-        self.update_trigger.set()
-        self.update_finished.wait()
+        self._trigger_updating_experts()
 
 
 class NoModulesFound(RuntimeError):
