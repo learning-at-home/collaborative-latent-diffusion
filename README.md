@@ -25,7 +25,7 @@ pip install matplotlib
 
 ## How to call remote inference
 
-Call the remote inference:
+Call the remote inference (no need to have a GPU):
 
 ```python
 from diffusion_client import DiffusionClient
@@ -42,7 +42,7 @@ images = client.draw(2 * ['a photo of the san francisco golden gate bridge',
                           'hedgehog sleeping near a laptop'])
 ```
 
-Draw results (e.g., in a Jupyter notebook):
+Draw results:
 
 ```python
 import matplotlib.pyplot as plt
@@ -55,6 +55,8 @@ for index, img in enumerate(images):
 plt.tight_layout()
 plt.show()
 ```
+
+**[[Try it in Google Colab]](https://colab.research.google.com/drive/1_XtEjXzskKRrgPcvCYXjLu2g34jZE0Zo?usp=sharing)**
 
 Expected output:
 
