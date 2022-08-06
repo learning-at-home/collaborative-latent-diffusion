@@ -1,4 +1,4 @@
-# Collaborative Inference for Diffusion Models
+# Collaborative Inference of Diffusion Models
 
 This is an example of collaborative inference of the latent diffusion model from [this notebook](https://colab.research.google.com/github/multimodalart/latent-diffusion-notebook/blob/main/Latent_Diffusion_LAION_400M_model_text_to_image.ipynb) by [@multimodalart](https://twitter.com/multimodalart).
 
@@ -77,5 +77,5 @@ to announce your public IP to the rest of the network.
 ## Authors
 
 [
-Based on assorted code by shuf(mryab@ younesbelkada@ borzunov@ timdettmers@ dbaranchuk@ greenfatguy@ artek0chumak@ and hivemind contributors)
+Based on assorted code by shuf([mryab@](https://github.com/mryab) [younesbelkada@](https://github.com/younesbelkada) [borzunov@](https://github.com/borzunov) [timdettmers@](https://github.com/timdettmers) [dbaranchuk@](https://github.com/dbaranchuk) [greenfatguy@](https://github.com/GreenFatGuy) [artek0chumak@](https://github.com/artek0chumak) and [hivemind](https://github.com/learning-at-home/hivemind) contributors)
 ]
