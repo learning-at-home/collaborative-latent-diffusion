@@ -1,4 +1,4 @@
-# Collaborative Inference of Diffusion Models
+# Collaborative Inference of Latent Diffusion
 
 This is an example of collaborative inference of the latent diffusion model from [this notebook](https://colab.research.google.com/github/multimodalart/latent-diffusion-notebook/blob/main/Latent_Diffusion_LAION_400M_model_text_to_image.ipynb) by [@multimodalart](https://twitter.com/multimodalart).
 
