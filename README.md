@@ -1,6 +1,14 @@
+# Collaborative Inference for Diffusion Models
 
+This is an example of collaborative inference of the latent diffusion model from [this notebook](https://colab.research.google.com/github/multimodalart/latent-diffusion-notebook/blob/main/Latent_Diffusion_LAION_400M_model_text_to_image.ipynb) by [@multimodalart](https://twitter.com/multimodalart).
 
-# Install (core only)
+- Model: [CompVis/latent-diffusion](https://github.com/CompVis/latent-diffusion)
+- Dataset: [LAION-400M](https://laion.ai/laion-400-open-dataset/)
+- Distributed inference: [hivemind](https://github.com/learning-at-home/hivemind)
+
+**Warning:** This is a demo for research purposes only. Some safety features of the original model may be disabled.
+
+## Installing requirements
 ```bash
 
 conda create -y --name demo-for-laion python=3.8.12 pip
@@ -11,7 +19,7 @@ pip install https://github.com/learning-at-home/hivemind/archive/61e5e8c1f33dd23
 pip install matplotlib
 ```
 
-### Call remote inference
+## How to call remote inference
 
 Call the remote inference:
 
@@ -22,9 +30,9 @@ client = DiffusionClient(
     initial_peers=['/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86'],
 )
 
-images = client.draw(2 * ['a photo of san francisco golden gate bridge',
-                          'a graphite sketch of a gothic cathedral',
-                          'a mecha robot holding a picture of a hedgehog'])
+images = client.draw(2 * ['a photo of the san francisco golden gate bridge',
+                          'graphite sketch of a gothic cathedral',
+                          'hedgehog sleeping near a laptop'])
 ```
 
 Draw results (e.g., in a Jupyter notebook):
@@ -45,7 +53,9 @@ Expected output:
 
 <img src="https://github.com/learning-at-home/demo-for-laion/blob/main/img/example_output.png" width="560">
 
-### Run server
+## How to run a new server
+
+First, you need to install all dependencies for the model from the original [Colab notebook](https://colab.research.google.com/github/multimodalart/latent-diffusion-notebook/blob/main/Latent_Diffusion_LAION_400M_model_text_to_image.ipynb). Then, you can run:
 
 ```python
 python -m run_server --identity server1.id --host_maddrs "/ip4/0.0.0.0/tcp/31234"
