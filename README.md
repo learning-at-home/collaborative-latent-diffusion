@@ -43,7 +43,7 @@ plt.show()
 
 Expected output:
 
-![](img/example_output.png)
+<img src="https://github.com/learning-at-home/demo-for-laion/blob/main/img/example_output.png" width="560">
 
 ### Run server
 
