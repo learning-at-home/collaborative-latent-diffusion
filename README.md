@@ -58,9 +58,15 @@ Expected output:
 First, you need to install all dependencies for the model from the original [Colab notebook](https://colab.research.google.com/github/multimodalart/latent-diffusion-notebook/blob/main/Latent_Diffusion_LAION_400M_model_text_to_image.ipynb). Then, you can run:
 
 ```python
-python -m run_server --identity server1.id --host_maddrs "/ip4/0.0.0.0/tcp/31234" --initial_peers "/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86"
+python -m run_server --identity server1.id --host_maddrs "/ip4/0.0.0.0/tcp/31234" \
+    --initial_peers "/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86"
 # Skip --initial_peers if you'd like to start a new swarm
 ```
+
+Ensure that `--max-batch-size` is small enough for your GPU to do inference without running out of memory. The default value is 16.
+
+If your public IP address doesn't match the IP address of the network interface, use `--announce_maddrs /ip4/1.2.3.4/tcp/31324`
+to announce your public IP to the rest of the network.
 
 ## Authors
 
