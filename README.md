@@ -2,6 +2,10 @@
 
 This is an example of collaborative inference of the latent diffusion model from [this notebook](https://colab.research.google.com/github/multimodalart/latent-diffusion-notebook/blob/main/Latent_Diffusion_LAION_400M_model_text_to_image.ipynb) by [@multimodalart](https://twitter.com/multimodalart).
 
+**Idea:** A swarm of servers from all over the Internet hold a model on their GPUs and respond to clients' queries to run inference.
+The queries are evenly distributed among all servers connected to the swarm. Any GPU owner who is willing to help may
+run a server and connect to the swarm, thus increasing the total system throughput.
+
 - Model: [CompVis/latent-diffusion](https://github.com/CompVis/latent-diffusion)
 - Dataset: [LAION-400M](https://laion.ai/laion-400-open-dataset/)
 - Distributed inference: [hivemind](https://github.com/learning-at-home/hivemind)
@@ -64,8 +68,6 @@ python -m run_server --identity server1.id --host_maddrs "/ip4/0.0.0.0/tcp/31234
     --initial_peers "/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86"
 # Skip --initial_peers if you'd like to start a new swarm
 ```
-
-Client queries are evenly distributed among all servers connected to the swarm.
 
 Ensure that `--max-batch-size` is small enough for your GPU to do inference without running out of memory. The default value is 16.
 
