@@ -10,7 +10,7 @@ STEPS = 50
 
 def get_input_example(batch_size: int, *_unused):
     cond_tokens = torch.empty((batch_size, COND_NUM_TOKENS), dtype=torch.int64)
-    initial_images = torch.empty((batch_size, 3, HEIGHT, WIDTH), dtype=torch.uint8)
+    initial_images = torch.empty((batch_size, CHANNELS, HEIGHT, WIDTH), dtype=torch.uint8)
     return (cond_tokens, initial_images)
 
 
