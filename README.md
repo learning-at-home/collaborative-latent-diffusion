@@ -58,8 +58,8 @@ Expected output:
 First, you need to install all dependencies for the model from the original [Colab notebook](https://colab.research.google.com/github/multimodalart/latent-diffusion-notebook/blob/main/Latent_Diffusion_LAION_400M_model_text_to_image.ipynb). Then, you can run:
 
 ```python
-python -m run_server --identity server1.id --host_maddrs "/ip4/0.0.0.0/tcp/31234"
-# if there are existing servers, add --initial_peers ADDRESS_PRINTED_BY_ONE_OR_MORE_EXISTNG_PEERS # e.g. /ip4/123.123.123.123/tcp/31234
+python -m run_server --identity server1.id --host_maddrs "/ip4/0.0.0.0/tcp/31234" --initial_peers "/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86"
+# Skip --initial_peers if you'd like to start a new swarm
 ```
 
 ## Authors
