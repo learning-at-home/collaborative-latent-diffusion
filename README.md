@@ -41,6 +41,7 @@ print(f'Found {client.n_active_servers} active servers')
 images = client.draw(2 * ['a photo of the san francisco golden gate bridge',
                           'graphite sketch of a gothic cathedral',
                           'hedgehog sleeping near a laptop'])
+# Use client.draw(..., return_encoded=True) to get WEBP-encoded images instead of bitmaps
 ```
 
 Draw results:
