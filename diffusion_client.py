@@ -1,5 +1,6 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import cv2
 import numpy as np
 import torch
 import torch.nn as nn
@@ -32,7 +33,7 @@ class DiffusionClient:
         dht = hivemind.DHT(initial_peers, client_mode=True, start=True, **kwargs)
         self.expert = BalancedRemoteExpert(dht=dht, uid_prefix=dht_prefix + ".")
 
-    def draw(self, prompts: List[str]) -> np.ndarray:
+    def draw(self, prompts: List[str], *, return_encoded: bool = False) -> Union[np.ndarray, List[bytes]]:
         encoded_prompts = []
         for prompt in prompts:
             tensor = torch.tensor(list(prompt.encode()), dtype=torch.int64)
@@ -40,8 +41,17 @@ class DiffusionClient:
             encoded_prompts.append(tensor)
         encoded_prompts = torch.stack(encoded_prompts)
 
-        output_images, = self.expert(encoded_prompts)
-        return output_images.numpy()
+        encoded_images, = self.expert(encoded_prompts)
+
+        if return_encoded:
+            return [buf.tobytes() for buf in encoded_images.numpy()]
+
+        output_images = []
+        for buf in encoded_images.numpy():
+            image = cv2.imdecode(buf, 1)  # imdecode() returns a BGR image
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            output_images.append(image)
+        return np.stack(output_images)
 
     @property
     def n_active_servers(self) -> int:

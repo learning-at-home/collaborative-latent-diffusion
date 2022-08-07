@@ -18,10 +18,12 @@ sys.path.append('../taming-transformers')
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
 import autokeras as ak
+import cv2
 import open_clip
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from einops import rearrange
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -42,6 +44,7 @@ MODEL_PATH = os.path.join(os.path.dirname(__file__), '../model')
 MAX_PROMPT_LENGTH = 512
 CHANNELS = 3
 HEIGHT = WIDTH = 256
+WEBP_QUALITY = 80
 
 
 def load_safety_model(clip_model):
@@ -190,5 +193,16 @@ class DiffusionModule(nn.Module):
             nsfw_threshold=0.5
         )
         output_images = run(self._model, self._clip_model, self._clip_preprocess, self._safety_model, args)
-        assert output_images.dtype == torch.uint8  # note: output dtype is important since it affects bandwidth usage!
-        return (output_images,)
+
+        encoded_images = []
+        for image in output_images.numpy():
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)  # imencode() operates in BGR
+            retval, buf = cv2.imencode('.webp', image, [cv2.IMWRITE_WEBP_QUALITY, WEBP_QUALITY])
+            assert retval
+            encoded_images.append(torch.tensor(buf, dtype=torch.uint8))
+
+        max_buf_len = max(len(buf) for buf in encoded_images)
+        encoded_images = torch.stack([F.pad(buf, (0, max_buf_len - len(buf))) for buf in encoded_images])
+
+        assert encoded_images.dtype == torch.uint8  # note: output dtype is important since it affects bandwidth usage!
+        return (encoded_images,)
