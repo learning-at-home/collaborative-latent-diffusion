@@ -44,7 +44,7 @@ MODEL_PATH = os.path.join(os.path.dirname(__file__), '../model')
 MAX_PROMPT_LENGTH = 512
 CHANNELS = 3
 HEIGHT = WIDTH = 256
-WEBP_QUALITY = 80
+WEBP_QUALITY = 60
 
 
 def load_safety_model(clip_model):
