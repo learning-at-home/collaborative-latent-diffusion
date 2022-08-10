@@ -88,7 +88,6 @@ def main():
         logger.info(f"Generating {uids_to_generate} expert uids from pattern {expert_pattern}")
         reserved_uids.extend(_generate_uids(uids_to_generate, expert_pattern, dht))
 
-    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     sample_input = name_to_input[args.module_cls](DUMMY_BATCH_SIZE)
     if isinstance(sample_input, tuple):
         args_schema = tuple(BatchTensorDescriptor.from_tensor(arg, compression) for arg in sample_input)
@@ -112,7 +111,7 @@ def main():
         dht,
         backends,
         num_connection_handlers=args.num_handlers,
-        device=device,
+        device=args.device,
         checkpoint_dir=args.checkpoint_dir,
         stats_report_interval=args.stats_report_interval,
         update_period=args.update_period,
