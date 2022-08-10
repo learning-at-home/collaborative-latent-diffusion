@@ -1,9 +1,7 @@
-from functools import partial
 from pathlib import Path
 
 import configargparse
 import hivemind
-import torch
 from hivemind import ModuleBackend
 
 from hivemind.moe import Server

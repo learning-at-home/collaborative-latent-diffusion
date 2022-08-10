@@ -159,7 +159,7 @@ def run(model, clip_model, preprocess, safety_model, opt):
                     scores = torch.tensor(scores[:, 0])
                     nsfw_scores.append(scores)
 
-    return torch.stack(all_samples), torch.cat(nsfw_scores)
+        return torch.stack(all_samples), torch.cat(nsfw_scores)
 
 
 def get_input_example(batch_size: int, *_unused):

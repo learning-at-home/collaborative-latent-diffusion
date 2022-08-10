@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -12,7 +13,7 @@ import hivemind
 from load_balancer import LoadBalancer, NoModulesFound
 from hivemind.moe.client.expert import DUMMY, expert_forward
 from hivemind.compression import serialize_torch_tensor
-from hivemind.utils import get_logger, nested_compare, nested_flatten, nested_pack, use_hivemind_log_handler
+from hivemind.utils import get_logger, nested_compare, nested_flatten, nested_pack
 
 
 logger = get_logger(__name__)
@@ -22,6 +23,7 @@ MAX_PROMPT_LENGTH = 512
 MAX_NODES = 99999
 
 
+@dataclass
 class GeneratedImage:
     encoded_image: bytes
     decoded_image: Optional[np.ndarray]
@@ -60,7 +62,7 @@ class DiffusionClient:
         encoded_images, nsfw_scores = self.expert(encoded_prompts)
 
         result = []
-        for buf, nsfw_score in zip(encoded_images.numpy(), nsfw_scores.numpy()):
+        for buf, nsfw_score in zip(encoded_images.numpy(), nsfw_scores.detach().numpy()):
             if nsfw_score >= nsfw_threshold:
                 raise NSFWOutputError("Output contains NSFW images")
 
