@@ -163,7 +163,7 @@ def run(model, clip_model, preprocess, safety_model, opt):
 
 
 def get_input_example(batch_size: int, *_unused):
-    prompts = torch.empty((batch_size, MAX_PROMPT_LENGTH), dtype=torch.int64)
+    prompts = torch.empty((batch_size, MAX_PROMPT_LENGTH), dtype=torch.uint8)
     return (prompts,)
 
 
@@ -183,7 +183,7 @@ class DiffusionModule(nn.Module):
         self._model = self._model.cuda()
         logger.info('Loaded diffusion model')
 
-    def forward(self, prompts: torch.LongTensor):
+    def forward(self, prompts: torch.ByteTensor):
         logger.info(f"Running forward pass, prompts.shape={prompts.shape}")
 
         args = argparse.Namespace(

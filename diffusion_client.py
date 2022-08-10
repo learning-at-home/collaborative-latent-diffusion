@@ -52,7 +52,7 @@ class DiffusionClient:
     ) -> List[GeneratedImage]:
         encoded_prompts = []
         for prompt in prompts:
-            tensor = torch.tensor(list(prompt.encode()), dtype=torch.int64)
+            tensor = torch.tensor(list(prompt.encode()), dtype=torch.uint8)
             tensor = F.pad(tensor, (0, MAX_PROMPT_LENGTH - len(tensor)))
             encoded_prompts.append(tensor)
         encoded_prompts = torch.stack(encoded_prompts)
