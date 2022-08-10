@@ -140,22 +140,26 @@ def run(model, clip_model, preprocess, safety_model, opt):
                     x_samples_ddim = model.decode_first_stage(samples_ddim)
                     x_samples_ddim = torch.clamp((x_samples_ddim+1.0)/2.0, min=0.0, max=1.0)
 
+                    clip_inputs = []
                     for x_sample in x_samples_ddim:
                         x_sample = (255. * rearrange(x_sample, 'c h w -> h w c')).to(torch.uint8).cpu()
-                        image_vector = Image.fromarray(x_sample.numpy())
-                        image = preprocess(image_vector).unsqueeze(0).to(torch.float32)
-                        image_features = clip_model.encode_image(image)
-
-                        image_features /= image_features.norm(dim=-1, keepdim=True)
-                        query = image_features.to(torch.float32).numpy()
-                        score = safety_model.predict(query, batch_size=query.shape[0], verbose=0)
-                        assert score.shape == (1, 1)
-                        score = torch.tensor(score[0, 0])
-
                         all_samples.append(x_sample)
-                        nsfw_scores.append(score)
 
-    return torch.stack(all_samples), torch.stack(nsfw_scores)
+                        image_vector = Image.fromarray(x_sample.numpy())
+                        image = preprocess(image_vector).to(torch.float32)
+                        clip_inputs.append(image)
+                    clip_inputs = torch.stack(clip_inputs)
+
+                    image_features = clip_model.encode_image(clip_inputs)
+                    image_features /= image_features.norm(dim=-1, keepdim=True)
+
+                    query = image_features.to(torch.float32).numpy()
+                    scores = safety_model.predict(query, batch_size=query.shape[0], verbose=0)
+                    assert scores.shape[1] == 1
+                    scores = torch.tensor(scores[:, 0])
+                    nsfw_scores.append(scores)
+
+    return torch.stack(all_samples), torch.cat(nsfw_scores)
 
 
 def get_input_example(batch_size: int, *_unused):
