@@ -34,8 +34,8 @@ from diffusion_client import DiffusionClient
 # Here, you can specify one or more addresses of any servers
 # connected to the swarm (no need to list all of them)
 client = DiffusionClient(initial_peers=[
-    '/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86',
-    '/ip4/193.106.95.184/tcp/31235/p2p/QmYN4gEa3uGVcxqjMznr5vEG7DUBGUWZgT98Rnrs6GU4Hn',
+    '/ip4/193.106.95.184/tcp/31334/p2p/QmRbeBn2noC63PWHAM2w4mQCrjLFks2vc4Dgy1YooEpUYJ',
+    '/ip4/193.106.95.184/tcp/31335/p2p/Qmf3DM44osRjP2xFmomh8oH8HnwLDV9ePDMSvGo5JtjEuL',
 ])
 print(f'Found {client.n_active_servers} active servers')
 
@@ -85,8 +85,8 @@ First, you need to install all dependencies for the model from the original [Col
 
 ```python
 python -m run_server --identity server1.id --host_maddrs "/ip4/0.0.0.0/tcp/31234" --initial_peers \
-    "/ip4/193.106.95.184/tcp/31234/p2p/Qmas1tApYHyNWXAMoJ9pxkAWBXcy4z11yquoAM3eiF1E86" \
-    "/ip4/193.106.95.184/tcp/31235/p2p/QmYN4gEa3uGVcxqjMznr5vEG7DUBGUWZgT98Rnrs6GU4Hn"
+    "/ip4/193.106.95.184/tcp/31334/p2p/QmRbeBn2noC63PWHAM2w4mQCrjLFks2vc4Dgy1YooEpUYJ" \
+    "/ip4/193.106.95.184/tcp/31335/p2p/Qmf3DM44osRjP2xFmomh8oH8HnwLDV9ePDMSvGo5JtjEuL"
 # Skip --initial_peers if you'd like to start a new swarm
 ```
 
