@@ -22,6 +22,16 @@ MAX_PROMPT_LENGTH = 512
 MAX_NODES = 99999
 
 
+class GeneratedImage:
+    encoded_image: bytes
+    decoded_image: Optional[np.ndarray]
+    nsfw_score: float
+
+
+class NSFWOutputError(ValueError):
+    pass
+
+
 class DiffusionClient:
     def __init__(
         self,
@@ -33,7 +43,13 @@ class DiffusionClient:
         dht = hivemind.DHT(initial_peers, client_mode=True, start=True, **kwargs)
         self.expert = BalancedRemoteExpert(dht=dht, uid_prefix=dht_prefix + ".")
 
-    def draw(self, prompts: List[str], *, return_encoded: bool = False) -> Union[np.ndarray, List[bytes]]:
+    def draw(
+        self,
+        prompts: List[str],
+        *,
+        skip_decoding: bool = False,
+        nsfw_threshold: float = 0.9,
+    ) -> List[GeneratedImage]:
         encoded_prompts = []
         for prompt in prompts:
             tensor = torch.tensor(list(prompt.encode()), dtype=torch.int64)
@@ -41,17 +57,24 @@ class DiffusionClient:
             encoded_prompts.append(tensor)
         encoded_prompts = torch.stack(encoded_prompts)
 
-        encoded_images, = self.expert(encoded_prompts)
+        encoded_images, nsfw_scores = self.expert(encoded_prompts)
 
-        if return_encoded:
-            return [buf.tobytes() for buf in encoded_images.numpy()]
+        result = []
+        for buf, nsfw_score in zip(encoded_images.numpy(), nsfw_scores.numpy()):
+            if nsfw_score >= nsfw_threshold:
+                raise NSFWOutputError("Output contains NSFW images")
 
-        output_images = []
-        for buf in encoded_images.numpy():
-            image = cv2.imdecode(buf, 1)  # imdecode() returns a BGR image
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            output_images.append(image)
-        return np.stack(output_images)
+            decoded_image = None
+            if not skip_decoding:
+                decoded_image = cv2.imdecode(buf, 1)  # imdecode() returns a BGR image
+                decoded_image = cv2.cvtColor(decoded_image, cv2.COLOR_BGR2RGB)
+
+            result.append(GeneratedImage(
+                encoded_image=buf.tobytes(),
+                decoded_image=decoded_image,
+                nsfw_score=nsfw_score,
+            ))
+        return result
 
     @property
     def n_active_servers(self) -> int:

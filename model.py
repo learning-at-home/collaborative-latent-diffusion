@@ -211,4 +211,4 @@ class DiffusionModule(nn.Module):
         encoded_images = torch.stack([F.pad(buf, (0, max_buf_len - len(buf))) for buf in encoded_images])
 
         assert encoded_images.dtype == torch.uint8  # note: output dtype is important since it affects bandwidth usage!
-        return (encoded_images,)
+        return encoded_images, nsfw_scores

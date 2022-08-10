@@ -8,6 +8,7 @@ run a server and connect to the swarm, thus increasing the total system throughp
 
 - Model: [CompVis/latent-diffusion](https://github.com/CompVis/latent-diffusion)
 - Dataset: [LAION-400M](https://laion.ai/laion-400-open-dataset/)
+- NSFW filtering: [LAION-AI/CLIP-based-NSFW-Detector](https://github.com/LAION-AI/CLIP-based-NSFW-Detector)
 - Distributed inference: [hivemind](https://github.com/learning-at-home/hivemind)
 
 **Warning:** This is a demo for research purposes only. Some safety features of the original model may be disabled.
@@ -41,10 +42,18 @@ print(f'Found {client.n_active_servers} active servers')
 images = client.draw(2 * ['a photo of the san francisco golden gate bridge',
                           'graphite sketch of a gothic cathedral',
                           'hedgehog sleeping near a laptop'])
-# Use client.draw(..., return_encoded=True) to get WEBP-encoded images instead of bitmaps
 ```
 
-Draw results:
+This returns a list of the following datastructures:
+
+```python
+class GeneratedImage:
+    encoded_image: bytes                 # WEBP-encoded image
+    decoded_image: Optional[np.ndarray]  # Pixel values, a numpy array of shape (height, width, 3)
+    nsfw_score: float                    # NSFW detector score. May be used for extra filtering
+```
+
+You can use them to draw results:
 
 ```python
 import matplotlib.pyplot as plt
@@ -52,7 +61,7 @@ import matplotlib.pyplot as plt
 plt.figure(figsize=(10, 6))
 for index, img in enumerate(images):
     plt.subplot(2, 3, index + 1)
-    plt.imshow(img)
+    plt.imshow(img.decoded_image)
     plt.axis('off')
 plt.tight_layout()
 plt.show()
@@ -63,6 +72,12 @@ plt.show()
 Expected output:
 
 <img src="https://github.com/learning-at-home/demo-for-laion/blob/main/img/example_output.png" width="560">
+
+**Pro Tips:**
+
+- Use `client.draw(..., skip_decoding=True)` if you don't need the decoded images.
+- Use `client.draw(..., nsfw_threshold=value)` to change the NSFW detector threshold.
+    `client.draw()` raises an `NSFWOutputError` if it detects images with score exceeding the threshold.
 
 ## How to run a new server
 
