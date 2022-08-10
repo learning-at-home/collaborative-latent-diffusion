@@ -44,7 +44,9 @@ MODEL_PATH = os.path.join(os.path.dirname(__file__), '../model')
 MAX_PROMPT_LENGTH = 512
 CHANNELS = 3
 HEIGHT = WIDTH = 256
+
 WEBP_QUALITY = 60
+NSFW_THRESHOLD = 0.9
 
 
 def load_safety_model(clip_model):
@@ -106,6 +108,13 @@ def load_model_from_config(config, ckpt, verbose=False):
     return model
 
 
+def make_nsfw_placeholder(height, width):
+    placeholder = np.full((height, width, 3), 255, dtype=np.uint8)
+    cv2.putText(placeholder, 'NSFW detected', org=(10, height // 2), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=1, color=(255, 0, 0), thickness=2, lineType=cv2.LINE_AA)
+    return placeholder
+
+
 def run(model, clip_model, preprocess, safety_model, opt):
     torch.cuda.empty_cache()
     gc.collect()
@@ -155,11 +164,15 @@ def run(model, clip_model, preprocess, safety_model, opt):
 
                     query = image_features.to(torch.float32).numpy()
                     scores = safety_model.predict(query, batch_size=query.shape[0], verbose=0)
-                    assert scores.shape[1] == 1
+
                     scores = torch.tensor(scores[:, 0])
                     nsfw_scores.append(scores)
 
-        return torch.stack(all_samples), torch.cat(nsfw_scores)
+        all_samples, nsfw_scores = torch.stack(all_samples), torch.cat(nsfw_scores)
+        nsfw_samples = nsfw_scores >= NSFW_THRESHOLD
+        if nsfw_samples.any():
+            all_samples[nsfw_samples] = torch.tensor(make_nsfw_placeholder(opt.H, opt.W))
+        return all_samples, nsfw_scores
 
 
 def get_input_example(batch_size: int, *_unused):

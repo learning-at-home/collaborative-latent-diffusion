@@ -30,10 +30,6 @@ class GeneratedImage:
     nsfw_score: float
 
 
-class NSFWOutputError(ValueError):
-    pass
-
-
 class DiffusionClient:
     def __init__(
         self,
@@ -45,13 +41,7 @@ class DiffusionClient:
         dht = hivemind.DHT(initial_peers, client_mode=True, start=True, **kwargs)
         self.expert = BalancedRemoteExpert(dht=dht, uid_prefix=dht_prefix + ".")
 
-    def draw(
-        self,
-        prompts: List[str],
-        *,
-        skip_decoding: bool = False,
-        nsfw_threshold: float = 0.9,
-    ) -> List[GeneratedImage]:
+    def draw(self, prompts: List[str], *, skip_decoding: bool = False) -> List[GeneratedImage]:
         encoded_prompts = []
         for prompt in prompts:
             tensor = torch.tensor(list(prompt.encode()), dtype=torch.uint8)
@@ -63,9 +53,6 @@ class DiffusionClient:
 
         result = []
         for buf, nsfw_score in zip(encoded_images.numpy(), nsfw_scores.detach().numpy()):
-            if nsfw_score >= nsfw_threshold:
-                raise NSFWOutputError("Output contains NSFW images")
-
             decoded_image = None
             if not skip_decoding:
                 decoded_image = cv2.imdecode(buf, 1)  # imdecode() returns a BGR image
