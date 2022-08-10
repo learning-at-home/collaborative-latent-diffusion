@@ -95,6 +95,8 @@ Ensure that `--max-batch-size` is small enough for your GPU to do inference with
 If your public IP address doesn't match the IP address of the network interface, use `--announce_maddrs /ip4/1.2.3.4/tcp/31324`
 to announce your public IP to the rest of the network.
 
+Servers may still occupy GPU memory after crashing with errors, so run `pkill -f run_server` before restarting them.
+
 ## Authors
 
 [

@@ -10,6 +10,7 @@ import gc
 import os
 import sys
 import zipfile
+from collections import Counter
 from urllib.request import urlretrieve
 
 sys.path.append("../latent-diffusion")
@@ -124,7 +125,8 @@ def run(model, clip_model, preprocess, safety_model, opt):
     else:
         sampler = DDIMSampler(model)
 
-    decoded_prompts = [bytes(tensor).rstrip(b'0').decode(errors='ignore') for tensor in opt.prompts]
+    decoded_prompts = [bytes(tensor).rstrip(b'\0').decode(errors='ignore') for tensor in opt.prompts]
+    logger.info(f"Running inference, prompts: {Counter(decoded_prompts).most_common()}")
 
     all_samples = []
     nsfw_scores = []
@@ -171,6 +173,7 @@ def run(model, clip_model, preprocess, safety_model, opt):
         all_samples, nsfw_scores = torch.stack(all_samples), torch.cat(nsfw_scores)
         nsfw_samples = nsfw_scores >= NSFW_THRESHOLD
         if nsfw_samples.any():
+            logger.warning(f"{nsfw_samples.sum()} NSFW outputs detected")
             all_samples[nsfw_samples] = torch.tensor(make_nsfw_placeholder(opt.H, opt.W))
         return all_samples, nsfw_scores
 
@@ -197,8 +200,6 @@ class DiffusionModule(nn.Module):
         logger.info('Loaded diffusion model')
 
     def forward(self, prompts: torch.ByteTensor):
-        logger.info(f"Running forward pass, prompts.shape={prompts.shape}")
-
         args = argparse.Namespace(
             prompts=prompts,
             ddim_steps=50,
